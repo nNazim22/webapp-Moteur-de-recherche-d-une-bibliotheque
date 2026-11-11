@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bibliothèque : moteur de recherche</title>
+  <style>
+    :root {
+      --bg: #fafaf8;
+      --fg: #1c1c1a;
+      --muted: #6b6b66;
+      --card: #ffffff;
+      --line: #e2e2dc;
+      --accent: #2a5db0;
+      --accent-fg: #ffffff;
+      --danger: #b3261e;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #161615;
+        --fg: #ecece8;
+        --muted: #9a9a93;
+        --card: #1f1f1d;
+        --line: #34342f;
+        --accent: #7aa7ee;
+        --accent-fg: #101010;
+        --danger: #f2b8b5;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin: 0 0 4px;
+    }
+
+    .sub {
+      color: var(--muted);
+      margin: 0 0 20px;
+      font-size: 0.95rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--fg);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .tab[aria-selected="true"] {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      padding: 12px;
+      font: inherit;
+      color: var(--fg);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    button.go {
+      padding: 12px 18px;
+      font: inherit;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      background: var(--accent);
+      color: var(--accent-fg);
+    }
+
+    button.go:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 10px 0 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .options label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    select {
+      font: inherit;
+      padding: 4px 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card);
+      color: var(--fg);
+    }
+
+    .hint {
+      margin: 10px 0 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    code {
+      font-family: ui-monospace, Consolas, monospace;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 0 4px;
+    }
+
+    #status {
+      margin: 20px 0 8px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      min-height: 1.5em;
+    }
+
+    #status.error {
+      color: var(--danger);
+    }
+
+    #terms {
+      margin: 0 0 12px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+
+    ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .book {
+      display: grid;
+      grid-template-columns: 2.2rem 1fr auto;
+      gap: 8px;
+      align-items: start;
+      padding: 12px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .rank {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .title {
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .author {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .score {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .score small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>Bibliothèque</h1>
+    <p class="sub" id="stats">Chargement…</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-search" aria-selected="true">Recherche</button>
+      <button class="tab" role="tab" id="tab-advanced" aria-selected="false">Recherche avancée (regex)</button>
+    </div>
+
+    <form id="form" autocomplete="off">
+      <div class="row">
+        <input type="text" id="q" aria-label="Requête" placeholder="Un mot-clé, par exemple : whale" autofocus>
+        <button class="go" id="go" type="submit">Chercher</button>
+      </div>
+      <div class="options">
+        <label id="mode-label">Mode
+          <select id="mode">
+            <option value="exact">mot exact</option>
+            <option value="substring">contient la chaîne</option>
+          </select>
+        </label>
+        <label>Résultats
+          <select id="limit">
+            <option>10</option>
+            <option selected>20</option>
+            <option>50</option>
+            <option>100</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint" id="hint" hidden>
+        Syntaxe : <code>.</code> <code>*</code> <code>+</code> <code>?</code> <code>|</code> <code>( )</code>.
+        Les crochets <code>[ ]</code> et les ancres <code>^</code> <code>$</code> ne sont pas gérés.
+        La regex est testée sur les mots de l’index (en minuscules).
+      </p>
+    </form>
+
+    <div id="status" role="status" aria-live="polite"></div>
+    <p id="terms"></p>
+    <ol id="results"></ol>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let tab = "search";      // "search" ou "advanced"
+    let lastRequest = 0;     // sert à ignorer les réponses arrivées en retard
+
+    function fmt(n) { return Number(n).toLocaleString("fr-FR"); }
+
+    function setTab(name) {
+      tab = name;
+      $("tab-search").setAttribute("aria-selected", String(name === "search"));
+      $("tab-advanced").setAttribute("aria-selected", String(name === "advanced"));
+      $("mode-label").hidden = name !== "search";
+      $("hint").hidden = name !== "advanced";
+      $("q").placeholder = name === "search"
+        ? "Un mot-clé, par exemple : whale"
+        : "Une expression régulière, par exemple : wh(a|e)+l";
+      clearResults();
+      $("q").focus();
+    }
+
+    function clearResults() {
+      $("status").textContent = "";
+      $("status").className = "";
+      $("terms").textContent = "";
+      $("results").replaceChildren();
+    }
+
+    function showError(message) {
+      clearResults();
+      $("status").textContent = message;
+      $("status").className = "error";
+    }
+
+    function render(data) {
+      clearResults();
+      const n = data.n_books;
+      $("status").textContent =
+        `${fmt(n)} ${n > 1 ? "livres" : "livre"} · ${fmt(data.n_terms)} ` +
+        `${data.n_terms > 1 ? "mots correspondants" : "mot correspondant"} · ${data.time_ms} ms`;
+
+      if (data.matched_terms.length > 0) {
+        const more = data.n_terms > data.matched_terms.length ? ", …" : "";
+        $("terms").textContent = "Mots : " + data.matched_terms.join(", ") + more;
+      }
+
+      // On construit les éléments avec textContent (jamais innerHTML) : les titres
+      // viennent de fichiers externes et ne doivent pas pouvoir injecter du HTML.
+      const items = data.results.map((b, i) => {
+        const li = document.createElement("li");
+        li.className = "book";
+
+        const rank = document.createElement("span");
+        rank.className = "rank";
+        rank.textContent = String(i + 1);
+
+        const info = document.createElement("div");
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = b.title;
+        const author = document.createElement("div");
+        author.className = "author";
+        author.textContent = `${b.author} · ${fmt(b.n_words)} mots`;
+        info.append(title, author);
+
+        const score = document.createElement("div");
+        score.className = "score";
+        score.textContent = fmt(b.score);
+        const label = document.createElement("small");
+        label.textContent = b.score > 1 ? "occurrences" : "occurrence";
+        score.append(label);
+
+        li.append(rank, info, score);
+        return li;
+      });
+      $("results").append(...items);
+    }
+
+    async function onSubmit(event) {
+      event.preventDefault();
+      const q = $("q").value.trim();
+      if (!q) { showError("Saisissez une requête."); return; }
+
+      const params = new URLSearchParams({ limit: $("limit").value });
+      let url;
+      if (tab === "search") {
+        params.set("q", q);
+        params.set("mode", $("mode").value);
+        url = "/api/search?" + params;
+      } else {
+        params.set("regex", q);          // URLSearchParams encode "+" correctement
+        url = "/api/advanced?" + params;
+      }
+
+      const id = ++lastRequest;
+      $("go").disabled = true;
+      $("status").className = "";
+      $("status").textContent = "Recherche…";
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (id !== lastRequest) return;
+        if (!response.ok) {
+          showError(typeof data.detail === "string" ? data.detail : "Requête invalide.");
+        } else {
+          render(data);
+        }
+      } catch (err) {
+        if (id === lastRequest) showError("Impossible de joindre le serveur.");
+      } finally {
+        if (id === lastRequest) $("go").disabled = false;
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const s = await (await fetch("/api/stats")).json();
+        $("stats").textContent = `${fmt(s.books)} livres · ${fmt(s.terms)} mots distincts indexés`;
+      } catch (err) {
+        $("stats").textContent = "Serveur injoignable";
+      }
+    }
+
+    $("form").addEventListener("submit", onSubmit);
+    $("tab-search").addEventListener("click", () => setTab("search"));
+    $("tab-advanced").addEventListener("click", () => setTab("advanced"));
+    loadStats();
+  </script>
+</body>
+
+</html>
