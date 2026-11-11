@@ -1,18 +1,4 @@
-"""Télécharge des livres du Projet Gutenberg (en anglais) pour constituer la bibliothèque.
 
-Usage :
-    python backend/scripts/download_books.py --target 1700
-
-- Métadonnées : API Gutendex (https://gutendex.com), livres triés par popularité.
-- Textes : fichiers .txt de gutenberg.org, sans l'en-tête ni le pied de page Gutenberg.
-- On ne garde que les livres d'au moins --min-words mots.
-- Reprise automatique : relancer la commande continue là où elle s'est arrêtée.
-
-Sortie :
-    data/books/<id>.txt
-    data/manifest.csv     (id, titre, auteur, nb_mots, url)  -> preuve de provenance
-    data/rejected.txt     (ids écartés : trop courts ou illisibles)
-"""
 import argparse
 import csv
 import re

@@ -1,4 +1,4 @@
-from nfa import EPSILON, ANY
+from .nfa import EPSILON, ANY
 
 OTHER = "OTHER"
 DEAD = -1          #

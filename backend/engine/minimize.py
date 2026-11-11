@@ -1,5 +1,5 @@
 
-from dfa import DFA, DEAD
+from .dfa import DFA, DEAD
 
 
 def minimize(dfa):

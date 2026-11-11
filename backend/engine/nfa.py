@@ -1,5 +1,5 @@
 
-from regex_parser import CHAR, DOT, EPS, CONCAT, UNION, STAR
+from .regex_parser import CHAR, DOT, EPS, CONCAT, UNION, STAR
 
 EPSILON = None   
 ANY = "ANY"      
