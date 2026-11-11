@@ -4,3 +4,4 @@ uvicorn
 numpy
 networkx
 pytest
+httpx
