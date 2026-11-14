@@ -52,4 +52,40 @@ def test_empty_query_gives_400(client):
 def test_bad_parameters_give_422(client):
     assert client.get("/api/search").status_code == 422
     assert client.get("/api/search", params={"q": "x", "limit": 0}).status_code == 422
-    assert client.get("/api/search", params={"q": "x", "mode": "regex"}).status_code == 422 
+    assert client.get("/api/search", params={"q": "x", "mode": "regex"}).status_code == 422
+
+
+# --- lecture d'un livre ---
+
+def test_book_metadata(client):
+    r = client.get("/api/books/1")
+    assert r.status_code == 200
+    assert r.json()["title"] == "Livre 1" and r.json()["n_pages"] == 1
+
+
+def test_book_page(client):
+    r = client.get("/api/books/2/pages/1")
+    assert r.status_code == 200
+    assert "king" in r.json()["paragraphs"][0]
+
+
+def test_book_hits(client):
+    r = client.get("/api/books/1/hits", params={"terms": "whale,ocean"})
+    assert r.json() == {"pages": [1]}
+    assert client.get("/api/books/2/hits", params={"terms": "whale"}).json() == {"pages": []}
+
+
+def test_book_hits_substring(client):
+    r = client.get("/api/books/2/hits", params={"terms": "lov", "whole": "false"})
+    assert r.json() == {"pages": [1]}
+
+
+def test_unknown_book_and_page_give_404(client):
+    assert client.get("/api/books/999").status_code == 404
+    assert client.get("/api/books/1/pages/2").status_code == 404
+    assert client.get("/api/books/1/pages/0").status_code == 404
+
+
+def test_hits_bad_terms_give_400(client):
+    assert client.get("/api/books/1/hits", params={"terms": " , "}).status_code == 400
+    assert client.get("/api/books/1/hits", params={"terms": ",".join(["a"] * 51)}).status_code == 400

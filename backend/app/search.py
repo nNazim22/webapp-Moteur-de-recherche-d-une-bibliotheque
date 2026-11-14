@@ -26,6 +26,7 @@ DEFAULT_DB = Path(os.environ.get("DAAR_DB", Path(__file__).resolve().parents[2] 
 CHUNK = 500        # nombre de mots par requête SQL (SQLite limite le nombre de paramètres)
 CACHE_SIZE = 128   # nombre de requêtes dont on garde la liste de mots correspondants
 MODES = ("exact", "substring", "regex")
+MAX_TERMS = 50     # nombre maximal de mots correspondants renvoyés dans la réponse
 
 
 class Library:
@@ -92,6 +93,21 @@ class Library:
                 f"SELECT id, title, author, n_words FROM books WHERE id IN ({marks})", book_ids)
             return {r[0]: r for r in rows}
 
+    # --- lecture d'un livre ---
+
+    def get_book(self, book_id):
+        """Métadonnées d'un livre (None s'il n'existe pas dans l'index)."""
+        with closing(sqlite3.connect(self.db_path)) as con:
+            row = con.execute(
+                "SELECT id, title, author, n_words FROM books WHERE id = ?", (book_id,)).fetchone()
+        if row is None:
+            return None
+        return {"id": row[0], "title": row[1], "author": row[2], "n_words": row[3]}
+
+    def book_path(self, book_id):
+        """Fichier texte du livre : data/books/<id>.txt, à côté de index.db."""
+        return self.db_path.parent / "books" / f"{int(book_id)}.txt"
+
     def search(self, query, mode="exact", limit=20):
         """Renvoie un dictionnaire : livres classés par occurrences + infos utiles."""
         if mode not in MODES:
@@ -111,7 +127,7 @@ class Library:
             "query": query,
             "mode": mode,
             "n_terms": len(term_ids),                 # mots du vocabulaire qui correspondent
-            "matched_terms": [self.term_of[t] for t in term_ids[:20]],
+            "matched_terms": [self.term_of[t] for t in term_ids[:MAX_TERMS]],
             "n_books": len(scores),                   # livres contenant au moins un de ces mots
             "time_ms": round((time.perf_counter() - t0) * 1000, 1),
             "results": results,

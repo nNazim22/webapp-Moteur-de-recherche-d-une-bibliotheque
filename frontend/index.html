@@ -1,391 +1,601 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bibliothèque : moteur de recherche</title>
-  <style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Bibliothèque</title>
+<style>
+  :root {
+    --bg: #f5f6fa; --surface: #ffffff; --surface-2: #eceef5; --fg: #16181d; --muted: #667085;
+    --line: #e3e6ee; --accent: #4f46e5; --accent-soft: #eceafd; --accent-fg: #ffffff;
+    --danger: #b42318; --mark: #ffe58a;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 6px 18px rgba(16, 24, 40, .07);
+    --reader-size: 1.15rem;
+  }
+  @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #fafaf8;
-      --fg: #1c1c1a;
-      --muted: #6b6b66;
-      --card: #ffffff;
-      --line: #e2e2dc;
-      --accent: #2a5db0;
-      --accent-fg: #ffffff;
-      --danger: #b3261e;
+      --bg: #0f1115; --surface: #171a21; --surface-2: #20242d; --fg: #eceef3; --muted: #9aa3b2;
+      --line: #2a2f3a; --accent: #8b93ff; --accent-soft: #232646; --accent-fg: #10121a;
+      --danger: #fda29b; --mark: #6b5a12; --shadow: none;
     }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #161615;
-        --fg: #ecece8;
-        --muted: #9a9a93;
-        --card: #1f1f1d;
-        --line: #34342f;
-        --accent: #7aa7ee;
-        --accent-fg: #101010;
-        --danger: #f2b8b5;
-      }
-    }
+  /* ---------- en-tête ---------- */
+  .top { display: flex; align-items: center; justify-content: space-between; max-width: 880px; margin: 0 auto; padding: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; }
+  .brand svg { color: var(--accent); }
+  .stats { color: var(--muted); font-size: .85rem; }
 
-    * {
-      box-sizing: border-box;
-    }
+  main { max-width: 880px; margin: 0 auto; padding: 0 16px 64px; }
 
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--fg);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    }
+  /* ---------- recherche ---------- */
+  .hero { padding: 28px 0 8px; text-align: center; }
+  .hero h1 { font-size: clamp(1.9rem, 5.5vw, 2.7rem); line-height: 1.12; margin: 0 0 10px; letter-spacing: -.025em; }
+  .lead { color: var(--muted); margin: 0 auto 26px; max-width: 34rem; }
+  .hero.compact { padding: 4px 0 0; text-align: left; }
+  .hero.compact h1, .hero.compact .lead, .hero.compact .examples { display: none; }
 
-    main {
-      max-width: 760px;
-      margin: 0 auto;
-      padding: 24px 16px 64px;
-    }
+  .searchbox {
+    display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 18px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow);
+  }
+  .searchbox:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .searchbox svg { flex: none; color: var(--muted); }
+  .searchbox input {
+    flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit;
+    font: inherit; font-size: 1.05rem; padding: 10px 2px;
+  }
+  .primary {
+    border: 0; border-radius: 999px; padding: 11px 22px; font-weight: 600;
+    background: var(--accent); color: var(--accent-fg);
+  }
+  .primary:disabled { opacity: .6; cursor: progress; }
 
-    h1 {
-      font-size: 1.6rem;
-      margin: 0 0 4px;
-    }
+  .modes { display: inline-flex; gap: 2px; margin-top: 16px; padding: 4px; background: var(--surface-2); border-radius: 999px; }
+  .modes label { position: relative; cursor: pointer; }
+  .modes input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .modes span { display: block; padding: 7px 18px; border-radius: 999px; font-size: .92rem; color: var(--muted); }
+  .modes input:checked + span { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: var(--shadow); }
+  .modes input:focus-visible + span { outline: 2px solid var(--accent); }
+  .mode-help { margin: 10px auto 0; max-width: 40rem; color: var(--muted); font-size: .86rem; }
+  .hero.compact .mode-help { margin-left: 0; }
 
-    .sub {
-      color: var(--muted);
-      margin: 0 0 20px;
-      font-size: 0.95rem;
-    }
+  .examples { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; color: var(--muted); font-size: .86rem; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line); font-size: .88rem;
+  }
+  button.chip:hover { border-color: var(--accent); }
+  .chip small { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
 
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
+  /* ---------- résultats ---------- */
+  #status { margin: 22px 0 0; text-align: center; color: var(--muted); }
+  #status.error { color: var(--danger); }
+  .summary { margin: 26px 0 10px; color: var(--muted); font-size: .92rem; }
+  .terms { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+  .terms .chip { padding: 2px 10px; font-size: .82rem; background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+  .list { display: grid; gap: 10px; }
+  .card {
+    display: grid; grid-template-columns: 2.1rem 1fr auto; gap: 14px; align-items: center;
+    padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    transition: transform .12s, border-color .12s, box-shadow .12s;
+  }
+  .card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-1px); }
+  .rank { width: 2.1rem; height: 2.1rem; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); font-size: .8rem; font-weight: 700; }
+  .title { font-weight: 600; overflow-wrap: anywhere; }
+  .meta { color: var(--muted); font-size: .88rem; overflow-wrap: anywhere; }
+  .score { min-width: 8rem; text-align: right; }
+  .score strong { display: block; font-variant-numeric: tabular-nums; }
+  .score span { color: var(--muted); font-size: .78rem; }
+  .bar { height: 4px; margin-top: 6px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .secondary { display: block; margin: 16px auto 0; padding: 10px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
+  .secondary:hover { border-color: var(--accent); }
+  .skeleton { height: 66px; border-radius: 14px; background: linear-gradient(90deg, var(--surface-2), var(--surface), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  @media (max-width: 560px) {
+    .card { grid-template-columns: 1fr; gap: 8px; }
+    .rank { display: none; }
+    .score { text-align: left; }
+    .searchbox { padding-left: 14px; }
+    .primary { padding: 11px 16px; }
+  }
 
-    .tab {
-      flex: 1;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--card);
-      color: var(--fg);
-      font: inherit;
-      cursor: pointer;
-    }
+  /* ---------- lecteur ---------- */
+  .reader-top {
+    position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line);
+    padding-top: env(safe-area-inset-top);
+  }
+  @supports (background: color-mix(in srgb, red 50%, transparent)) {
+    .reader-top, .pager { background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); }
+  }
+  .reader-top .bar-row { max-width: 760px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+  .back { flex: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: .9rem; }
+  .back:hover { border-color: var(--accent); }
+  .book-title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+  .book-title strong, .book-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .book-title span { color: var(--muted); font-size: .82rem; }
+  .sizes { flex: none; display: flex; gap: 4px; }
+  .icon-btn { min-width: 2.2rem; height: 2.2rem; padding: 0 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  .icon-btn:hover:not(:disabled) { border-color: var(--accent); }
+  .icon-btn:disabled { opacity: .4; cursor: default; }
+  .hits { max-width: 760px; margin: 0 auto; padding: 0 16px 10px; display: flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--muted); }
+  .hits .grow { flex: 1; min-width: 0; }
 
-    .tab[aria-selected="true"] {
-      background: var(--accent);
-      color: var(--accent-fg);
-      border-color: var(--accent);
-    }
+  .text { max-width: 40rem; margin: 0 auto; padding: 28px 20px 130px; font-family: Georgia, "Iowan Old Style", "Times New Roman", serif; font-size: var(--reader-size); line-height: 1.8; }
+  .text p { margin: 0 0 1.1em; white-space: pre-line; overflow-wrap: anywhere; }
+  .text .notice { color: var(--muted); font-family: system-ui, sans-serif; font-size: .95rem; text-align: center; }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2px; }
 
-    .row {
-      display: flex;
-      gap: 8px;
-    }
-
-    input[type="text"] {
-      flex: 1;
-      min-width: 0;
-      padding: 12px;
-      font: inherit;
-      color: var(--fg);
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-    }
-
-    button.go {
-      padding: 12px 18px;
-      font: inherit;
-      border: 0;
-      border-radius: 8px;
-      cursor: pointer;
-      background: var(--accent);
-      color: var(--accent-fg);
-    }
-
-    button.go:disabled {
-      opacity: 0.6;
-      cursor: wait;
-    }
-
-    .options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin: 10px 0 0;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    .options label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    select {
-      font: inherit;
-      padding: 4px 6px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: var(--card);
-      color: var(--fg);
-    }
-
-    .hint {
-      margin: 10px 0 0;
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-
-    code {
-      font-family: ui-monospace, Consolas, monospace;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      padding: 0 4px;
-    }
-
-    #status {
-      margin: 20px 0 8px;
-      font-size: 0.9rem;
-      color: var(--muted);
-      min-height: 1.5em;
-    }
-
-    #status.error {
-      color: var(--danger);
-    }
-
-    #terms {
-      margin: 0 0 12px;
-      font-size: 0.85rem;
-      color: var(--muted);
-      overflow-wrap: anywhere;
-    }
-
-    ol {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: grid;
-      gap: 8px;
-    }
-
-    .book {
-      display: grid;
-      grid-template-columns: 2.2rem 1fr auto;
-      gap: 8px;
-      align-items: start;
-      padding: 12px;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-    }
-
-    .rank {
-      color: var(--muted);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .title {
-      font-weight: 600;
-      overflow-wrap: anywhere;
-    }
-
-    .author {
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    .score {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
-    .score small {
-      display: block;
-      color: var(--muted);
-      font-size: 0.75rem;
-    }
-  </style>
+  .pager {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--bg); border-top: 1px solid var(--line);
+    display: flex; justify-content: center; align-items: center; gap: 12px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+  .pager .count { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .92rem; }
+  .pager input { width: 4.6rem; padding: 6px 8px; text-align: center; font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  .pager .nav { padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  .pager .nav:hover:not(:disabled) { border-color: var(--accent); }
+  .pager .nav:disabled { opacity: .4; cursor: default; }
+</style>
 </head>
-
 <body>
-  <main>
-    <h1>Bibliothèque</h1>
-    <p class="sub" id="stats">Chargement…</p>
 
-    <div class="tabs" role="tablist">
-      <button class="tab" role="tab" id="tab-search" aria-selected="true">Recherche</button>
-      <button class="tab" role="tab" id="tab-advanced" aria-selected="false">Recherche avancée (regex)</button>
-    </div>
+<header class="top">
+  <a class="brand" href="#" aria-label="Retour à la recherche">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>
+    <span>Bibliothèque</span>
+  </a>
+  <span class="stats" id="stats"></span>
+</header>
 
-    <form id="form" autocomplete="off">
-      <div class="row">
-        <input type="text" id="q" aria-label="Requête" placeholder="Un mot-clé, par exemple : whale" autofocus>
-        <button class="go" id="go" type="submit">Chercher</button>
+<!-- ============ vue recherche ============ -->
+<main id="view-search">
+  <section class="hero" id="hero">
+    <h1>Trouvez un livre</h1>
+    <p class="lead">Cherchez un mot dans toute la bibliothèque, puis lisez le livre directement ici.</p>
+
+    <form id="form" autocomplete="off" role="search">
+      <div class="searchbox">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="text" aria-label="Requête" autofocus enterkeyhint="search" autocapitalize="none" spellcheck="false">
+        <button class="primary" id="go" type="submit">Chercher</button>
       </div>
-      <div class="options">
-        <label id="mode-label">Mode
-          <select id="mode">
-            <option value="exact">mot exact</option>
-            <option value="substring">contient la chaîne</option>
-          </select>
-        </label>
-        <label>Résultats
-          <select id="limit">
-            <option>10</option>
-            <option selected>20</option>
-            <option>50</option>
-            <option>100</option>
-          </select>
-        </label>
+      <div class="modes" role="radiogroup" aria-label="Type de recherche">
+        <label><input type="radio" name="mode" value="exact" checked><span>Mot</span></label>
+        <label><input type="radio" name="mode" value="substring"><span>Contient</span></label>
+        <label><input type="radio" name="mode" value="regex"><span>Regex</span></label>
       </div>
-      <p class="hint" id="hint" hidden>
-        Syntaxe : <code>.</code> <code>*</code> <code>+</code> <code>?</code> <code>|</code> <code>( )</code>.
-        Les crochets <code>[ ]</code> et les ancres <code>^</code> <code>$</code> ne sont pas gérés.
-        La regex est testée sur les mots de l’index (en minuscules).
-      </p>
+      <p class="mode-help" id="mode-help"></p>
     </form>
 
-    <div id="status" role="status" aria-live="polite"></div>
-    <p id="terms"></p>
-    <ol id="results"></ol>
-  </main>
+    <div class="examples" id="examples"><span>Essayez :</span></div>
+  </section>
 
-  <script>
-    const $ = (id) => document.getElementById(id);
-    let tab = "search";      // "search" ou "advanced"
-    let lastRequest = 0;     // sert à ignorer les réponses arrivées en retard
+  <p id="status" role="status" aria-live="polite"></p>
 
-    function fmt(n) { return Number(n).toLocaleString("fr-FR"); }
+  <section id="results-section" hidden>
+    <p class="summary" id="summary"></p>
+    <div class="terms" id="terms"></div>
+    <div class="list" id="results"></div>
+    <button class="secondary" id="more" type="button" hidden>Afficher plus de résultats</button>
+  </section>
+</main>
 
-    function setTab(name) {
-      tab = name;
-      $("tab-search").setAttribute("aria-selected", String(name === "search"));
-      $("tab-advanced").setAttribute("aria-selected", String(name === "advanced"));
-      $("mode-label").hidden = name !== "search";
-      $("hint").hidden = name !== "advanced";
-      $("q").placeholder = name === "search"
-        ? "Un mot-clé, par exemple : whale"
-        : "Une expression régulière, par exemple : wh(a|e)+l";
-      clearResults();
-      $("q").focus();
+<!-- ============ vue lecture ============ -->
+<div id="view-reader" hidden>
+  <div class="reader-top">
+    <div class="bar-row">
+      <a class="back" href="#">← Résultats</a>
+      <div class="book-title"><strong id="r-title"></strong><span id="r-author"></span></div>
+      <div class="sizes">
+        <button class="icon-btn" id="font-minus" type="button" aria-label="Réduire la taille du texte">A−</button>
+        <button class="icon-btn" id="font-plus" type="button" aria-label="Agrandir la taille du texte">A+</button>
+      </div>
+    </div>
+    <div class="hits" id="hits" hidden>
+      <span class="grow" id="hits-label"></span>
+      <button class="icon-btn" id="hit-prev" type="button" aria-label="Occurrence précédente">‹</button>
+      <button class="icon-btn" id="hit-next" type="button" aria-label="Occurrence suivante">›</button>
+    </div>
+  </div>
+
+  <article class="text" id="text" aria-live="polite"></article>
+
+  <nav class="pager" aria-label="Pages">
+    <button class="nav" id="prev" type="button">← Précédente</button>
+    <span class="count">
+      <input id="page-input" type="number" min="1" value="1" aria-label="Numéro de page">
+      <span>/ <span id="n-pages">1</span></span>
+    </span>
+    <button class="nav" id="next" type="button">Suivante →</button>
+  </nav>
+</div>
+
+<script>
+  const $ = (selector) => document.querySelector(selector);
+  const fmt = (n) => Number(n).toLocaleString("fr-FR");
+
+  const MODE_HELP = {
+    exact: "Le mot exact, sans tenir compte des majuscules.",
+    substring: "Tous les mots qui contiennent cette suite de lettres : « wha » trouve whale, whatever…",
+    regex: "Expression régulière testée sur chaque mot de l’index. Syntaxe gérée : . * + ? | ( ). " +
+           "Les crochets [ ] et les ancres ^ $ ne sont pas gérés.",
+  };
+  const PLACEHOLDER = {
+    exact: "Un mot, par exemple : whale",
+    substring: "Une suite de lettres, par exemple : wha",
+    regex: "Une regex, par exemple : wh(a|e)+l",
+  };
+  const EXAMPLES = [
+    { q: "love", mode: "exact", tag: "mot" },
+    { q: "wha", mode: "substring", tag: "contient" },
+    { q: "colou?r", mode: "regex", tag: "regex" },
+    { q: "wh(a|e)+l", mode: "regex", tag: "regex" },
+  ];
+  const FONT_SIZES = [0.95, 1.05, 1.15, 1.3, 1.5];
+  const PAGE_STEP = 20;     // nombre de résultats ajoutés à chaque « Afficher plus »
+  const MAX_LIMIT = 100;    // limite acceptée par l’API
+
+  const state = {
+    mode: "exact",
+    request: 0,        // numéro de la dernière recherche (pour ignorer les réponses en retard)
+    ctx: null,         // dernière recherche : { raw, mode, terms, limit }
+    scrollY: 0,        // position de la liste de résultats, restaurée au retour
+    token: 0,          // numéro de la dernière ouverture de livre
+    bookId: null, book: null, page: 1, hits: [],
+    fontIndex: 2,
+  };
+
+  async function getJSON(url) {
+    const response = await fetch(url);
+    let body = null;
+    try { body = await response.json(); } catch (_) { /* corps non JSON */ }
+    if (!response.ok) {
+      throw new Error(body && typeof body.detail === "string" ? body.detail : "Erreur " + response.status);
+    }
+    return body;
+  }
+  const isNetworkError = (e) => e instanceof TypeError;
+
+  /* ------------------------------------------------------------------ */
+  /*  Vue recherche                                                      */
+  /* ------------------------------------------------------------------ */
+
+  function setStatus(message, isError = false) {
+    const el = $("#status");
+    el.textContent = message;
+    el.className = isError ? "error" : "";
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    document.querySelector(`input[name="mode"][value="${mode}"]`).checked = true;
+    $("#mode-help").textContent = MODE_HELP[mode];
+    $("#q").placeholder = PLACEHOLDER[mode];
+  }
+
+  function showSkeleton() {
+    $("#results-section").hidden = false;
+    $("#summary").textContent = "";
+    $("#terms").replaceChildren();
+    $("#more").hidden = true;
+    const bars = [1, 2, 3].map(() => Object.assign(document.createElement("div"), { className: "skeleton" }));
+    $("#results").replaceChildren(...bars);
+  }
+
+  async function search(limit = PAGE_STEP, again = null) {
+    const raw = again ? again.raw : $("#q").value.trim();
+    const mode = again ? again.mode : state.mode;
+    if (!raw) { setStatus("Saisissez une requête.", true); return; }
+
+    const params = new URLSearchParams({ limit });
+    let url;
+    if (mode === "regex") {
+      params.set("regex", raw);          // URLSearchParams encode correctement le « + »
+      url = "/api/advanced?" + params;
+    } else {
+      params.set("q", raw);
+      params.set("mode", mode);
+      url = "/api/search?" + params;
     }
 
-    function clearResults() {
-      $("status").textContent = "";
-      $("status").className = "";
-      $("terms").textContent = "";
-      $("results").replaceChildren();
+    const id = ++state.request;
+    $("#go").disabled = true;
+    $("#hero").classList.add("compact");
+    setStatus("");
+    if (!again) showSkeleton();
+    try {
+      const data = await getJSON(url);
+      if (id !== state.request) return;
+      state.ctx = { raw, mode, terms: data.matched_terms, limit };
+      renderResults(data);
+    } catch (e) {
+      if (id !== state.request) return;
+      $("#results-section").hidden = true;
+      setStatus(isNetworkError(e) ? "Impossible de joindre le serveur." : e.message, true);
+    } finally {
+      if (id === state.request) $("#go").disabled = false;
     }
+  }
 
-    function showError(message) {
-      clearResults();
-      $("status").textContent = message;
-      $("status").className = "error";
+  function renderResults(data) {
+    $("#results-section").hidden = false;
+    const n = data.n_books;
+    if (n === 0) {
+      $("#results-section").hidden = true;
+      setStatus(`Aucun livre ne contient « ${data.query} ».`);
+      return;
     }
+    setStatus("");
+    $("#summary").textContent =
+      `${fmt(n)} ${n > 1 ? "livres" : "livre"} · ${fmt(data.n_terms)} ` +
+      `${data.n_terms > 1 ? "mots correspondants" : "mot correspondant"} · ${data.time_ms} ms`;
 
-    function render(data) {
-      clearResults();
-      const n = data.n_books;
-      $("status").textContent =
-        `${fmt(n)} ${n > 1 ? "livres" : "livre"} · ${fmt(data.n_terms)} ` +
-        `${data.n_terms > 1 ? "mots correspondants" : "mot correspondant"} · ${data.time_ms} ms`;
+    const shown = data.matched_terms.slice(0, 12).map((t) =>
+      Object.assign(document.createElement("span"), { className: "chip", textContent: t }));
+    if (data.n_terms > shown.length) {
+      shown.push(Object.assign(document.createElement("span"), { className: "chip", textContent: `+ ${fmt(data.n_terms - shown.length)}` }));
+    }
+    $("#terms").replaceChildren(...shown);
 
-      if (data.matched_terms.length > 0) {
-        const more = data.n_terms > data.matched_terms.length ? ", …" : "";
-        $("terms").textContent = "Mots : " + data.matched_terms.join(", ") + more;
-      }
+    // textContent partout (jamais innerHTML) : les titres viennent de fichiers externes.
+    const max = Math.max(...data.results.map((b) => b.score));
+    $("#results").replaceChildren(...data.results.map((b, i) => bookCard(b, i, max)));
+    $("#more").hidden = !(data.results.length < n && state.ctx.limit < MAX_LIMIT);
+  }
 
-      // On construit les éléments avec textContent (jamais innerHTML) : les titres
-      // viennent de fichiers externes et ne doivent pas pouvoir injecter du HTML.
-      const items = data.results.map((b, i) => {
-        const li = document.createElement("li");
-        li.className = "book";
+  function bookCard(book, index, max) {
+    const card = document.createElement("a");
+    card.className = "card";
+    card.href = `#/livre/${book.id}`;
 
-        const rank = document.createElement("span");
-        rank.className = "rank";
-        rank.textContent = String(i + 1);
+    const rank = Object.assign(document.createElement("span"), { className: "rank", textContent: String(index + 1) });
 
-        const info = document.createElement("div");
-        const title = document.createElement("div");
-        title.className = "title";
-        title.textContent = b.title;
-        const author = document.createElement("div");
-        author.className = "author";
-        author.textContent = `${b.author} · ${fmt(b.n_words)} mots`;
-        info.append(title, author);
+    const info = document.createElement("div");
+    info.append(
+      Object.assign(document.createElement("div"), { className: "title", textContent: book.title }),
+      Object.assign(document.createElement("div"), { className: "meta", textContent: `${book.author} · ${fmt(book.n_words)} mots` }),
+    );
 
-        const score = document.createElement("div");
-        score.className = "score";
-        score.textContent = fmt(b.score);
-        const label = document.createElement("small");
-        label.textContent = b.score > 1 ? "occurrences" : "occurrence";
-        score.append(label);
+    const score = document.createElement("div");
+    score.className = "score";
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    const fill = document.createElement("i");
+    fill.style.width = Math.max(4, Math.round((book.score / max) * 100)) + "%";
+    bar.append(fill);
+    score.append(
+      Object.assign(document.createElement("strong"), { textContent: fmt(book.score) }),
+      Object.assign(document.createElement("span"), { textContent: book.score > 1 ? "occurrences" : "occurrence" }),
+      bar,
+    );
 
-        li.append(rank, info, score);
-        return li;
+    card.append(rank, info, score);
+    return card;
+  }
+
+  function renderExamples() {
+    const box = $("#examples");
+    EXAMPLES.forEach((ex) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.append(ex.q, Object.assign(document.createElement("small"), { textContent: ex.tag }));
+      chip.addEventListener("click", () => {
+        setMode(ex.mode);
+        $("#q").value = ex.q;
+        search();
       });
-      $("results").append(...items);
+      box.append(chip);
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Vue lecture                                                        */
+  /* ------------------------------------------------------------------ */
+
+  // Expression qui repère, dans le texte affiché, les mots de la dernière recherche.
+  function highlightRegex() {
+    const ctx = state.ctx;
+    if (!ctx) return null;
+    const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (ctx.mode === "substring") return new RegExp(escape(ctx.raw.toLowerCase()), "giu");
+    if (ctx.terms.length === 0) return null;
+    const words = [...ctx.terms].sort((a, b) => b.length - a.length).map(escape).join("|");
+    return new RegExp(`(?<!\\p{L})(?:${words})(?!\\p{L})`, "giu");
+  }
+
+  function appendHighlighted(element, text, rx) {
+    if (!rx) { element.textContent = text; return; }
+    let last = 0;
+    for (const m of text.matchAll(rx)) {
+      if (m.index > last) element.append(text.slice(last, m.index));
+      element.append(Object.assign(document.createElement("mark"), { textContent: m[0] }));
+      last = m.index + m[0].length;
     }
+    if (last < text.length) element.append(text.slice(last));
+  }
 
-    async function onSubmit(event) {
-      event.preventDefault();
-      const q = $("q").value.trim();
-      if (!q) { showError("Saisissez une requête."); return; }
+  function hitsQuery() {
+    const ctx = state.ctx;
+    if (!ctx) return null;
+    const words = ctx.mode === "substring" ? [ctx.raw.toLowerCase()] : ctx.terms;
+    if (words.length === 0) return null;
+    return new URLSearchParams({ terms: words.join(","), whole: String(ctx.mode !== "substring") });
+  }
 
-      const params = new URLSearchParams({ limit: $("limit").value });
-      let url;
-      if (tab === "search") {
-        params.set("q", q);
-        params.set("mode", $("mode").value);
-        url = "/api/search?" + params;
-      } else {
-        params.set("regex", q);          // URLSearchParams encode "+" correctement
-        url = "/api/advanced?" + params;
+  function showReaderMessage(message) {
+    $("#text").replaceChildren(Object.assign(document.createElement("p"), { className: "notice", textContent: message }));
+  }
+
+  async function openBook(id, requestedPage) {
+    const token = ++state.token;
+    showView("reader");
+    state.bookId = id;
+    state.hits = [];
+    $("#hits").hidden = true;
+    $("#r-title").textContent = "Chargement…";
+    $("#r-author").textContent = "";
+    showReaderMessage("");
+    try {
+      const book = await getJSON(`/api/books/${id}`);
+      if (token !== state.token) return;
+      state.book = book;
+      $("#r-title").textContent = book.title;
+      $("#r-author").textContent = book.author;
+      document.title = `${book.title} · Bibliothèque`;
+      $("#n-pages").textContent = fmt(book.n_pages);
+      $("#page-input").max = book.n_pages;
+      if (book.n_pages === 0) { showReaderMessage("Ce livre est vide."); return; }
+
+      const query = hitsQuery();
+      if (query) {
+        try { state.hits = (await getJSON(`/api/books/${id}/hits?${query}`)).pages; } catch (_) { /* surlignage seul */ }
+        if (token !== state.token) return;
       }
-
-      const id = ++lastRequest;
-      $("go").disabled = true;
-      $("status").className = "";
-      $("status").textContent = "Recherche…";
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-        if (id !== lastRequest) return;
-        if (!response.ok) {
-          showError(typeof data.detail === "string" ? data.detail : "Requête invalide.");
-        } else {
-          render(data);
-        }
-      } catch (err) {
-        if (id === lastRequest) showError("Impossible de joindre le serveur.");
-      } finally {
-        if (id === lastRequest) $("go").disabled = false;
-      }
+      const start = requestedPage || (state.hits.length ? state.hits[0] : 1);
+      await goPage(start, { token, toMark: !requestedPage && state.hits.length > 0 });
+    } catch (e) {
+      if (token !== state.token) return;
+      $("#r-title").textContent = "Livre indisponible";
+      showReaderMessage(isNetworkError(e) ? "Impossible de joindre le serveur." : e.message);
     }
+  }
 
-    async function loadStats() {
-      try {
-        const s = await (await fetch("/api/stats")).json();
-        $("stats").textContent = `${fmt(s.books)} livres · ${fmt(s.terms)} mots distincts indexés`;
-      } catch (err) {
-        $("stats").textContent = "Serveur injoignable";
-      }
+  async function goPage(page, { token = state.token, toMark = false } = {}) {
+    if (!state.book || state.book.n_pages === 0) return;
+    const target = Math.min(Math.max(1, Math.round(Number(page)) || 1), state.book.n_pages);
+    try {
+      const data = await getJSON(`/api/books/${state.bookId}/pages/${target}`);
+      if (token !== state.token) return;
+      state.page = target;
+      const rx = highlightRegex();
+      $("#text").replaceChildren(...data.paragraphs.map((text) => {
+        const p = document.createElement("p");
+        appendHighlighted(p, text, rx);
+        return p;
+      }));
+      history.replaceState(null, "", `#/livre/${state.bookId}/${target}`);
+      updatePager();
+      const mark = toMark ? $("#text mark") : null;
+      if (mark) mark.scrollIntoView({ block: "center" }); else window.scrollTo(0, 0);
+    } catch (e) {
+      if (token === state.token) showReaderMessage(isNetworkError(e) ? "Impossible de joindre le serveur." : e.message);
     }
+  }
 
-    $("form").addEventListener("submit", onSubmit);
-    $("tab-search").addEventListener("click", () => setTab("search"));
-    $("tab-advanced").addEventListener("click", () => setTab("advanced"));
-    loadStats();
-  </script>
+  function updatePager() {
+    const n = state.book.n_pages;
+    $("#page-input").value = state.page;
+    $("#prev").disabled = state.page <= 1;
+    $("#next").disabled = state.page >= n;
+
+    const hits = state.hits;
+    $("#hits").hidden = hits.length === 0;
+    if (hits.length) {
+      const here = hits.filter((p) => p <= state.page).length;
+      $("#hits-label").textContent =
+        `« ${state.ctx.raw} » : ${fmt(hits.length)} ${hits.length > 1 ? "pages" : "page"}` +
+        (hits.includes(state.page) ? ` (vous êtes sur la ${here}ᵉ)` : "");
+    }
+  }
+
+  function jumpToHit(direction) {
+    const hits = state.hits;
+    if (hits.length === 0) return;
+    const next = direction > 0
+      ? hits.find((p) => p > state.page) ?? hits[0]
+      : [...hits].reverse().find((p) => p < state.page) ?? hits[hits.length - 1];
+    goPage(next, { toMark: true });
+  }
+
+  function setFontSize(index) {
+    state.fontIndex = Math.min(Math.max(index, 0), FONT_SIZES.length - 1);
+    document.documentElement.style.setProperty("--reader-size", FONT_SIZES[state.fontIndex] + "rem");
+    $("#font-minus").disabled = state.fontIndex === 0;
+    $("#font-plus").disabled = state.fontIndex === FONT_SIZES.length - 1;
+    try { localStorage.setItem("reader-font", String(state.fontIndex)); } catch (_) { /* stockage indisponible */ }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Navigation entre les deux vues (#/livre/<id>/<page>)               */
+  /* ------------------------------------------------------------------ */
+
+  function showView(name) {
+    const toReader = name === "reader";
+    if (toReader && !$("#view-search").hidden) state.scrollY = window.scrollY;
+    $("#view-search").hidden = toReader;
+    $("#view-reader").hidden = !toReader;
+  }
+
+  function route() {
+    const m = location.hash.match(/^#\/livre\/(\d+)(?:\/(\d+))?$/);
+    if (m) {
+      openBook(Number(m[1]), m[2] ? Number(m[2]) : null);
+    } else {
+      state.token++;                       // annule les chargements de livre en cours
+      showView("search");
+      document.title = "Bibliothèque";
+      window.scrollTo(0, state.scrollY);
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Démarrage                                                          */
+  /* ------------------------------------------------------------------ */
+
+  $("#form").addEventListener("submit", (e) => { e.preventDefault(); search(); });
+  document.querySelectorAll('input[name="mode"]').forEach((radio) =>
+    radio.addEventListener("change", () => setMode(radio.value)));
+  $("#more").addEventListener("click", () =>
+    search(Math.min(state.ctx.limit + PAGE_STEP, MAX_LIMIT), state.ctx));
+
+  $("#prev").addEventListener("click", () => goPage(state.page - 1));
+  $("#next").addEventListener("click", () => goPage(state.page + 1));
+  $("#page-input").addEventListener("change", (e) => goPage(e.target.value));
+  $("#hit-prev").addEventListener("click", () => jumpToHit(-1));
+  $("#hit-next").addEventListener("click", () => jumpToHit(1));
+  $("#font-minus").addEventListener("click", () => setFontSize(state.fontIndex - 1));
+  $("#font-plus").addEventListener("click", () => setFontSize(state.fontIndex + 1));
+
+  document.addEventListener("keydown", (e) => {
+    if ($("#view-reader").hidden || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.target instanceof HTMLInputElement) return;
+    if (e.key === "ArrowRight") goPage(state.page + 1);
+    if (e.key === "ArrowLeft") goPage(state.page - 1);
+  });
+
+  window.addEventListener("hashchange", route);
+
+  (async function init() {
+    try {
+      const saved = localStorage.getItem("reader-font");       // null si jamais enregistré
+      if (saved !== null && Number.isInteger(Number(saved))) state.fontIndex = Number(saved);
+    } catch (_) { /* stockage indisponible */ }
+    setFontSize(state.fontIndex);
+    setMode("exact");
+    renderExamples();
+    route();
+    try {
+      const s = await getJSON("/api/stats");
+      $("#stats").textContent = `${fmt(s.books)} livres · ${fmt(s.terms)} mots indexés`;
+    } catch (_) {
+      $("#stats").textContent = "Serveur injoignable";
+    }
+  })();
+</script>
 </body>
-
 </html>

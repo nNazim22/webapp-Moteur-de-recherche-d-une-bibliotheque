@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    image: daar-projet2
+    container_name: daar-app
+    restart: unless-stopped        # redémarre après un plantage ou un redémarrage du serveur
+    ports:
+      - "80:8000"                  # http://<adresse du serveur>/ -> application
+    volumes:
+      - ./data:/app/data           # corpus (data/books) et index (data/index.db), hors de Git

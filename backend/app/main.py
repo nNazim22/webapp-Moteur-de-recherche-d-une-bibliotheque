@@ -11,6 +11,7 @@ from typing import Literal
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
+from .reader import find_hit_pages, load_pages
 from .search import Library
 
 app = FastAPI(title="Moteur de recherche de bibliothèque")
@@ -55,6 +56,48 @@ def api_advanced(
 ):
     """Recherche avancée par expression régulière, classée par occurrences."""
     return run_search(lib, regex, "regex", limit)
+
+
+def book_pages_or_404(lib, book_id):
+    """Métadonnées et pages d'un livre, ou erreur 404 s'il est inconnu ou si son fichier manque."""
+    book = lib.get_book(book_id)
+    if book is None:
+        raise HTTPException(status_code=404, detail="Livre inconnu")
+    path = lib.book_path(book_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Texte du livre introuvable sur le serveur")
+    return book, load_pages(str(path))
+
+
+@app.get("/api/books/{book_id}")
+def api_book(book_id: int, lib: Library = Depends(get_library)):
+    """Titre, auteur, taille et nombre de pages d'un livre."""
+    book, pages = book_pages_or_404(lib, book_id)
+    return {**book, "n_pages": len(pages)}
+
+
+@app.get("/api/books/{book_id}/pages/{page}")
+def api_page(book_id: int, page: int, lib: Library = Depends(get_library)):
+    """Une page du livre : liste de paragraphes."""
+    _, pages = book_pages_or_404(lib, book_id)
+    if not 1 <= page <= len(pages):
+        raise HTTPException(status_code=404, detail="Page inexistante")
+    return {"page": page, "n_pages": len(pages), "paragraphs": list(pages[page - 1])}
+
+
+@app.get("/api/books/{book_id}/hits")
+def api_hits(
+    book_id: int,
+    terms: str = Query(..., description="mots à repérer, séparés par des virgules"),
+    whole: bool = True,
+    lib: Library = Depends(get_library),
+):
+    """Numéros des pages du livre qui contiennent au moins un des mots."""
+    _, pages = book_pages_or_404(lib, book_id)
+    words = [t.strip() for t in terms.split(",") if t.strip()]
+    if not words or len(words) > 50 or any(len(w) > 60 for w in words):
+        raise HTTPException(status_code=400, detail="Liste de mots invalide (1 à 50 mots)")
+    return {"pages": find_hit_pages(pages, words, whole)}
 
 
 # L'interface (HTML/JS) est servie par la même application : un seul serveur à lancer.
