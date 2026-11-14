@@ -7,3 +7,5 @@ cd "$(dirname "$0")"
 . .venv/bin/activate
 python -m pip install -q -r backend/requirements.txt
 python backend/scripts/setup_data.py "$@"
+cd backend
+uvicorn app.main:app

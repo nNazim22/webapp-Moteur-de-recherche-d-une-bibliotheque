@@ -6,6 +6,8 @@ if not exist .venv ( python -m venv .venv || goto :erreur )
 call .venv\Scripts\activate.bat
 python -m pip install -q -r backend\requirements.txt || goto :erreur
 python backend\scripts\setup_data.py %*
+cd backend
+uvicorn app.main:app
 goto :fin
 :erreur
 echo.
