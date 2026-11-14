@@ -9,6 +9,8 @@ RUN pip install -r backend/requirements.txt
 COPY backend backend
 COPY frontend frontend
 
-# data/ (livres + index.db) n'est PAS dans l'image : monté en volume
+COPY entrypoint.sh /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--app-dir", "backend", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/entrypoint.sh"]
