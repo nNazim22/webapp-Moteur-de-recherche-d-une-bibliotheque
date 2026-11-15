@@ -90,7 +90,7 @@ def export_graphe(db_path="data/ranking.db", manifest="data/manifest.csv"):
     path = Path(db_path)
     if not path.exists():
         return None
-    from app.jaccard_graph import titles
+    from .jaccard_graph import titles
 
     tt = titles(Path(manifest))
     con = sqlite3.connect(path)

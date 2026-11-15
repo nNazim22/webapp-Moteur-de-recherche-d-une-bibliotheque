@@ -11,6 +11,7 @@ from typing import Literal
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
+from .graph_api import router as graph_router
 from .reader import find_hit_pages, load_pages
 from .search import Library
 
@@ -99,6 +100,10 @@ def api_hits(
         raise HTTPException(status_code=400, detail="Liste de mots invalide (1 à 50 mots)")
     return {"pages": find_hit_pages(pages, words, whole)}
 
+
+# Données de la page graphe.html (graphe de Jaccard et centralités).
+# À déclarer AVANT le montage de frontend/ ci-dessous.
+app.include_router(graph_router)
 
 # L'interface (HTML/JS) est servie par la même application : un seul serveur à lancer.
 # Ce montage doit rester en dernier, sinon il masquerait les routes /api.
