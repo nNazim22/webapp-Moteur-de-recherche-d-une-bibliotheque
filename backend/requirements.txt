@@ -1,0 +1,8 @@
+requests
+fastapi
+uvicorn
+numpy
+networkx
+pytest
+httpx
+scipy>=1.11

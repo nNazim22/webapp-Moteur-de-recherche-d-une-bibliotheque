@@ -1,0 +1,14 @@
+.git
+.venv
+venv
+data
+data-synth
+__pycache__
+*.pyc
+.pytest_cache
+oci_key*
+deploy_key*
+*.pem
+.env
+.DS_Store
+Thumbs.db

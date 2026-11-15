@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    container_name: daar-app
+    restart: unless-stopped
+    ports:
+      - "${DAAR_PORT:-80}:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      DAAR_DB: /app/data/index.db
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/stats', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90m

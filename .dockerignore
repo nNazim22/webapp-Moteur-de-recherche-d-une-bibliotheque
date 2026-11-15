@@ -1,0 +1,11 @@
+.git
+.venv
+data
+data-synth
+benchmarks
+rapport
+__pycache__
+*.pyc
+.pytest_cache
+*.zip
+*.rar

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graphe de Jaccard – Bibliothèque</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --line: #262b36;
+      --text: #e8eaf0;
+      --muted: #8b93a7;
+      --accent: #9a8cff;
+      --accent2: #ff7ab8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    header a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    header a:hover {
+      color: var(--text);
+    }
+
+    h1 {
+      font-size: 17px;
+      margin: 0;
+    }
+
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 18px 24px 40px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .card .v {
+      font-size: 22px;
+      font-weight: 650;
+    }
+
+    .card .l {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    select,
+    input[type=text] {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font: inherit;
+    }
+
+    input[type=text] {
+      min-width: 240px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 16px;
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stage {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      height: 620px;
+    }
+
+    canvas#net {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    canvas#net.drag {
+      cursor: grabbing;
+    }
+
+    #tip {
+      position: absolute;
+      pointer-events: none;
+      background: #000d;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 9px;
+      font-size: 12px;
+      display: none;
+      max-width: 280px;
+    }
+
+    .legend {
+      position: absolute;
+      left: 12px;
+      bottom: 10px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend .bar {
+      width: 110px;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, hsl(220, 80%, 60%), hsl(290, 80%, 62%), hsl(340, 85%, 62%));
+    }
+
+    aside {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    aside h2 {
+      font-size: 13px;
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 1fr 64px;
+      gap: 8px;
+      align-items: center;
+      margin: 5px 0;
+      cursor: pointer;
+    }
+
+    .bar-row:hover .name {
+      color: var(--accent);
+    }
+
+    .name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+    }
+
+    .track {
+      height: 6px;
+      background: var(--line);
+      border-radius: 4px;
+      margin-top: 3px;
+    }
+
+    .fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+
+    .val {
+      text-align: right;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    canvas#hist {
+      width: 100%;
+      height: 130px;
+      display: block;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 3px 10px;
+      font-size: 12px;
+    }
+
+    .kv span:nth-child(odd) {
+      color: var(--muted);
+    }
+
+    .neigh {
+      margin-top: 8px;
+      font-size: 12px;
+    }
+
+    .neigh div {
+      display: flex;
+      justify-content: space-between;
+      cursor: pointer;
+      padding: 2px 0;
+    }
+
+    .neigh div:hover {
+      color: var(--accent);
+    }
+
+    #msg {
+      padding: 40px;
+      text-align: center;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Graphe de Jaccard et centralités</h1>
+    <a href="/">← Retour à la recherche</a>
+  </header>
+  <main>
+    <div id="msg">Chargement du graphe…</div>
+    <div id="app" style="display:none">
+      <div class="stats" id="stats"></div>
+
+      <div class="controls">
+        <label>Indice de centralité
+          <select id="crit"></select>
+        </label>
+        <input type="text" id="find" placeholder="Rechercher un livre (numéro ou titre)">
+        <span class="hint">Molette : zoom · glisser : déplacer · clic : voisins d’un livre</span>
+      </div>
+
+      <div class="layout">
+        <div class="stage">
+          <canvas id="net"></canvas>
+          <div id="tip"></div>
+          <div class="legend"><span>faible</span>
+            <div class="bar"></div><span>forte</span>
+            <span id="legendInfo" style="margin-left:10px"></span>
+          </div>
+        </div>
+        <aside>
+          <section class="card">
+            <h2 id="topTitle">Top 15</h2>
+            <div id="top"></div>
+          </section>
+          <section class="card">
+            <h2>Distribution de l’indice</h2>
+            <canvas id="hist"></canvas>
+          </section>
+          <section class="card">
+            <h2>Livre sélectionné</h2>
+            <div id="sel" class="hint">Clique sur un sommet pour voir ses voisins.</div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+      const LABELS = {
+        pagerank: "PageRank", closeness: "Closeness (proximité)",
+        betweenness: "Betweenness (intermédiarité)", degree: "Degré"
+      };
+      const $ = (id) => document.getElementById(id);
+      const canvas = $("net"), ctx = canvas.getContext("2d");
+      const tip = $("tip");
+
+      let G = null, crit = "pagerank";
+      let nodes = [], edges = [], adj = [];
+      let vals = [], norm = [];          // valeur brute et rang normalisé [0,1]
+      let selected = -1, hovered = -1;
+      let view = { k: 1, tx: 0, ty: 0 };
+      let W = 0, H = 0, dpr = 1, pending = false;
+
+      const fmt = (v) => (v === null || v === undefined) ? "–"
+        : (Math.abs(v) >= 100 ? v.toFixed(0) : (Math.abs(v) >= 1 ? v.toFixed(2) : v.toPrecision(3)));
+      const label = (n) => n.title ? n.title : "Livre " + n.id;
+      const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+      fetch("/api/graph")
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(init)
+        .catch(() => {
+          $("msg").textContent = "Graphe indisponible : lance d’abord « python backend/scripts/build_graph.py ».";
+        });
+
+      function init(data) {
+        G = data; nodes = data.nodes; edges = data.edges;
+        adj = nodes.map(() => []);
+        edges.forEach(([a, b, w]) => { adj[a].push([b, w]); adj[b].push([a, w]); });
+
+        const available = Object.keys(LABELS).filter((c) => nodes.some((n) => n[c] !== null && n[c] !== undefined));
+        $("crit").innerHTML = available.map((c) => `<option value="${c}">${LABELS[c]}</option>`).join("");
+        crit = available.includes("pagerank") ? "pagerank" : available[0];
+        $("crit").value = crit;
+
+        const p = data.params || {};
+        $("stats").innerHTML = [
+          [nodes.length, "livres (sommets)"], [edges.length, "arêtes"],
+          [p.k || "–", "voisins par livre (k)"], [p.mots_conserves || "–", "mots du vocabulaire filtré"]
+        ].map(([v, l]) => `<div class="card"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+
+        $("msg").style.display = "none";
+        $("app").style.display = "block";
+        resize(); recompute(); fitView(); render();
+      }
+
+      // ---------- indice courant ----------
+      function recompute() {
+        vals = nodes.map((n) => (n[crit] === null || n[crit] === undefined) ? 0 : n[crit]);
+        const order = vals.map((v, i) => i).sort((a, b) => vals[a] - vals[b]);
+        norm = new Array(nodes.length);
+        order.forEach((i, r) => { norm[i] = nodes.length > 1 ? r / (nodes.length - 1) : 0; });
+        $("topTitle").textContent = "Top 15 – " + LABELS[crit];
+        $("legendInfo").textContent = "taille et couleur = " + LABELS[crit];
+        renderTop(); renderHist();
+      }
+
+      function renderTop() {
+        const idx = vals.map((v, i) => i).sort((a, b) => vals[b] - vals[a]).slice(0, 15);
+        const max = vals[idx[0]] || 1;
+        $("top").innerHTML = idx.map((i) =>
+          `<div class="bar-row" data-i="${i}"><div><div class="name">${esc(label(nodes[i]))}</div>` +
+          `<div class="track"><div class="fill" style="width:${(100 * vals[i] / max).toFixed(1)}%"></div></div></div>` +
+          `<div class="val">${fmt(vals[i])}</div></div>`).join("");
+        $("top").querySelectorAll(".bar-row").forEach((el) =>
+          el.addEventListener("click", () => select(+el.dataset.i, true)));
+      }
+
+      function renderHist() {
+        const c = $("hist"), x = c.getContext("2d");
+        const w = c.clientWidth, h = c.clientHeight;
+        c.width = w * dpr; c.height = h * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0);
+        x.clearRect(0, 0, w, h);
+        const B = 20, bins = new Array(B).fill(0);
+        const lo = Math.min(...vals), hi = Math.max(...vals), span = (hi - lo) || 1;
+        vals.forEach((v) => { bins[Math.min(B - 1, Math.floor((v - lo) / span * B))]++; });
+        const mx = Math.max(...bins), bw = (w - 8) / B;
+        bins.forEach((n, i) => {
+          const bh = (h - 30) * n / mx;
+          x.fillStyle = "hsl(" + (220 + 120 * i / B) + ",75%,62%)";
+          x.fillRect(4 + i * bw + 1, h - 18 - bh, bw - 2, bh);
+        });
+        x.fillStyle = "#8b93a7"; x.font = "10px system-ui";
+        x.fillText(fmt(lo), 4, h - 4);
+        const t = fmt(hi); x.fillText(t, w - 4 - x.measureText(t).width, h - 4);
+        x.fillText("nb de livres max : " + mx, 4, 10);
+      }
+
+      // ---------- vue ----------
+      function resize() {
+        dpr = window.devicePixelRatio || 1;
+        const r = canvas.getBoundingClientRect();
+        W = r.width; H = r.height;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+      }
+      function fitView() {
+        const pad = 30, s = Math.min(W, H) - 2 * pad;
+        view = { k: s, tx: (W - s) / 2, ty: (H - s) / 2 };
+      }
+      const sx = (n) => n.x * view.k + view.tx;
+      const sy = (n) => n.y * view.k + view.ty;
+      const radius = (i) => (2 + 7 * Math.sqrt(norm[i])) * Math.min(2.2, Math.max(0.7, Math.sqrt(view.k / 500)));
+      const color = (i, a) => "hsla(" + (220 + 120 * norm[i]) + ",80%," + (58 + 6 * norm[i]) + "%," + a + ")";
+
+      function schedule() { if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; render(); }); } }
+
+      function render() {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, W, H);
+        const hl = selected >= 0 ? new Set([selected, ...adj[selected].map((e) => e[0])]) : null;
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = hl ? "rgba(154,140,255,0.05)" : "rgba(154,140,255,0.10)";
+        ctx.beginPath();
+        for (const [a, b] of edges) {
+          if (hl && (a === selected || b === selected)) continue;
+          ctx.moveTo(sx(nodes[a]), sy(nodes[a])); ctx.lineTo(sx(nodes[b]), sy(nodes[b]));
+        }
+        ctx.stroke();
+        if (hl) {
+          ctx.strokeStyle = "rgba(255,122,184,0.8)"; ctx.lineWidth = 1.5; ctx.beginPath();
+          adj[selected].forEach(([b]) => {
+            ctx.moveTo(sx(nodes[selected]), sy(nodes[selected])); ctx.lineTo(sx(nodes[b]), sy(nodes[b]));
+          });
+          ctx.stroke();
+        }
+
+        const order = norm.map((v, i) => i).sort((a, b) => norm[a] - norm[b]); // les plus centraux dessinés en dernier
+        for (const i of order) {
+          const n = nodes[i];
+          ctx.beginPath(); ctx.arc(sx(n), sy(n), radius(i), 0, 6.2832);
+          ctx.fillStyle = color(i, hl && !hl.has(i) ? 0.18 : 0.92); ctx.fill();
+        }
+        [selected, hovered].forEach((i) => {
+          if (i < 0) return;
+          const n = nodes[i];
+          ctx.beginPath(); ctx.arc(sx(n), sy(n), radius(i) + 3, 0, 6.2832);
+          ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+        });
+      }
+
+      function pick(mx, my) {
+        let best = -1, bd = 1e9;
+        for (let i = 0; i < nodes.length; i++) {
+          const dx = sx(nodes[i]) - mx, dy = sy(nodes[i]) - my, d = dx * dx + dy * dy;
+          const r = radius(i) + 3;
+          if (d < r * r && d < bd) { bd = d; best = i; }
+        }
+        return best;
+      }
+
+      // ---------- sélection ----------
+      function rankOf(key, i) {
+        const v = nodes[i][key]; if (v === null || v === undefined) return null;
+        let r = 1; for (const n of nodes) if ((n[key] ?? -Infinity) > v) r++;
+        return r;
+      }
+      function select(i, center) {
+        selected = i;
+        if (i >= 0 && center) { // recentre en douceur sur le livre
+          view.tx += W / 2 - sx(nodes[i]); view.ty += H / 2 - sy(nodes[i]);
+        }
+        const box = $("sel");
+        if (i < 0) { box.className = "hint"; box.textContent = "Clique sur un sommet pour voir ses voisins."; render(); return; }
+        const n = nodes[i];
+        const rows = Object.keys(LABELS).filter((k) => n[k] !== null && n[k] !== undefined)
+          .map((k) => `<span>${LABELS[k]}</span><span>${fmt(n[k])} <small class="hint">(rang ${rankOf(k, i)}/${nodes.length})</small></span>`).join("");
+        const nb = adj[i].slice().sort((a, b) => b[1] - a[1]).slice(0, 8)
+          .map(([j, w]) => `<div data-i="${j}"><span>${esc(label(nodes[j]))}</span><span class="hint">J = ${w.toFixed(3)}</span></div>`).join("");
+        box.className = "";
+        box.innerHTML = `<div style="font-weight:600;margin-bottom:6px">${esc(label(n))}</div>` +
+          `<div class="kv"><span>Numéro</span><span>${n.id}</span>${rows}</div>` +
+          `<div class="neigh"><div class="hint" style="cursor:default">Voisins les plus proches</div>${nb}</div>`;
+        box.querySelectorAll(".neigh [data-i]").forEach((el) => el.addEventListener("click", () => select(+el.dataset.i, true)));
+        render();
+      }
+
+      // ---------- interactions ----------
+      let drag = null, moved = false;
+      canvas.addEventListener("mousedown", (e) => {
+        drag = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty }; moved = false; canvas.classList.add("drag");
+      });
+      window.addEventListener("mouseup", () => { drag = null; canvas.classList.remove("drag"); });
+      window.addEventListener("mousemove", (e) => {
+        if (!G) return;
+        if (drag) {
+          const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+          if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+          view.tx = drag.tx + dx; view.ty = drag.ty + dy; schedule(); return;
+        }
+        const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+        if (mx < 0 || my < 0 || mx > r.width || my > r.height) { tip.style.display = "none"; return; }
+        const h = pick(mx, my);
+        if (h !== hovered) { hovered = h; schedule(); }
+        if (h >= 0) {
+          const n = nodes[h];
+          tip.innerHTML = `<b>${esc(label(n))}</b><br>${LABELS[crit]} : ${fmt(n[crit])}<br>degré : ${n.degree}`;
+          tip.style.display = "block";
+          tip.style.left = Math.min(mx + 14, r.width - 290) + "px"; tip.style.top = (my + 14) + "px";
+        } else tip.style.display = "none";
+      });
+      canvas.addEventListener("click", (e) => {
+        if (moved) return;
+        const r = canvas.getBoundingClientRect();
+        select(pick(e.clientX - r.left, e.clientY - r.top), false);
+      });
+      canvas.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+        const f = Math.exp(-e.deltaY * 0.0015), k2 = Math.min(40000, Math.max(120, view.k * f)), s = k2 / view.k;
+        view.tx = mx - (mx - view.tx) * s; view.ty = my - (my - view.ty) * s; view.k = k2; schedule();
+      }, { passive: false });
+      window.addEventListener("resize", () => { if (!G) return; resize(); renderHist(); render(); });
+
+      $("crit").addEventListener("change", (e) => { crit = e.target.value; recompute(); render(); });
+      $("find").addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" || !G) return;
+        const q = e.target.value.trim().toLowerCase(); if (!q) return;
+        const i = nodes.findIndex((n) => String(n.id) === q || (n.title && n.title.toLowerCase().includes(q)));
+        if (i >= 0) select(i, true); else e.target.style.borderColor = "#ff6b6b";
+      });
+      $("find").addEventListener("input", (e) => { e.target.style.borderColor = ""; });
+    })();
+  </script>
+</body>
+
+</html>
