@@ -19,7 +19,8 @@ fi
 # 3. Graphe de Jaccard + centralités (classement)
 if [ ! -f data/ranking.db ] || ! python -c "import sqlite3; sqlite3.connect('data/ranking.db').execute('select 1 from centrality limit 1')" 2>/dev/null; then
   echo ">> Graphe de Jaccard absent : construction..."
-  python backend/scripts/build_graph.py
+  # un échec ici ne doit pas empêcher le site de démarrer
+  python backend/scripts/build_graph.py || echo ">> ATTENTION : graphe non construit (le classement par occurrences reste disponible)"
 fi
 
 exec uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000
